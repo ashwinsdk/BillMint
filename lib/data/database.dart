@@ -9,11 +9,8 @@
  * - AppSettings: Store app configuration
  */
 
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
+import 'connection.dart' as connection;
 
 part 'database.g.dart';
 
@@ -106,13 +103,15 @@ class AppSettings extends Table {
   tables: [Customers, Products, Invoices, InvoiceItems, AppSettings],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(connection.connect());
 
   @override
   int get schemaVersion => 1;
 
   // Customer queries
   Future<List<Customer>> getAllCustomers() => select(customers).get();
+
+  Stream<List<Customer>> watchAllCustomers() => select(customers).watch();
 
   Future<Customer?> getCustomerById(String id) =>
       (select(customers)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -134,6 +133,8 @@ class AppDatabase extends _$AppDatabase {
 
   // Product queries
   Future<List<Product>> getAllProducts() => select(products).get();
+
+  Stream<List<Product>> watchAllProducts() => select(products).watch();
 
   Future<Product?> getProductById(String id) =>
       (select(products)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -246,12 +247,4 @@ class AppDatabase extends _$AppDatabase {
       await delete(customers).go();
     });
   }
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'billmint.sqlite'));
-    return NativeDatabase(file);
-  });
 }

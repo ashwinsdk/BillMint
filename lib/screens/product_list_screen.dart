@@ -188,8 +188,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           unit: drift.Value(unitController.text),
           price: price,
           gstRate: drift.Value(gstRate),
-          createdAt: drift.Value(now),
-          updatedAt: drift.Value(now),
+          createdAt: now,
+          updatedAt: now,
         ),
       );
     }
@@ -269,22 +269,20 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       final price = double.tryParse(priceController.text) ?? 0.0;
       final gstRate = double.tryParse(gstController.text) ?? 0.0;
 
-      await database.updateProduct(
-        ProductsCompanion(
-          id: drift.Value(product.id),
-          name: drift.Value(nameController.text),
-          description: descController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(descController.text),
-          hsnCode: hsnController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(hsnController.text),
-          unit: drift.Value(unitController.text),
-          price: drift.Value(price),
-          gstRate: drift.Value(gstRate),
-          updatedAt: drift.Value(DateTime.now()),
+      final updated = product.copyWith(
+        name: nameController.text,
+        description: drift.Value(
+          descController.text.isEmpty ? null : descController.text,
         ),
+        hsnCode: drift.Value(
+          hsnController.text.isEmpty ? null : hsnController.text,
+        ),
+        unit: unitController.text,
+        price: price,
+        gstRate: gstRate,
+        updatedAt: DateTime.now(),
       );
+      await database.updateProduct(updated);
     }
   }
 

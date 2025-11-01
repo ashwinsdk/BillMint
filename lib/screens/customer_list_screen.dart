@@ -184,8 +184,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           gstin: gstinController.text.isEmpty
               ? const drift.Value.absent()
               : drift.Value(gstinController.text),
-          createdAt: drift.Value(now),
-          updatedAt: drift.Value(now),
+          createdAt: now,
+          updatedAt: now,
         ),
       );
     }
@@ -249,25 +249,23 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
 
     if (result == true && nameController.text.isNotEmpty) {
-      await database.updateCustomer(
-        CustomersCompanion(
-          id: drift.Value(customer.id),
-          name: drift.Value(nameController.text),
-          phone: phoneController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(phoneController.text),
-          email: emailController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(emailController.text),
-          address: addressController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(addressController.text),
-          gstin: gstinController.text.isEmpty
-              ? const drift.Value.absent()
-              : drift.Value(gstinController.text),
-          updatedAt: drift.Value(DateTime.now()),
+      final updated = customer.copyWith(
+        name: nameController.text,
+        phone: drift.Value(
+          phoneController.text.isEmpty ? null : phoneController.text,
         ),
+        email: drift.Value(
+          emailController.text.isEmpty ? null : emailController.text,
+        ),
+        address: drift.Value(
+          addressController.text.isEmpty ? null : addressController.text,
+        ),
+        gstin: drift.Value(
+          gstinController.text.isEmpty ? null : gstinController.text,
+        ),
+        updatedAt: DateTime.now(),
       );
+      await database.updateCustomer(updated);
     }
   }
 

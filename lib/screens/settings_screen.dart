@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-import '../data/database.dart';
 import '../providers/database_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -34,18 +32,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final database = ref.read(databaseProvider);
-    final settings = await database
-        .select(database.appSettings)
-        .getSingleOrNull();
 
-    if (settings != null && mounted) {
+    if (mounted) {
+      final businessName = await database.getSetting('businessName');
+      final address = await database.getSetting('businessAddress');
+      final phone = await database.getSetting('businessPhone');
+      final email = await database.getSetting('businessEmail');
+      final gstin = await database.getSetting('gstin');
+      final upiId = await database.getSetting('upiId');
+
       setState(() {
-        _businessNameController.text = settings.businessName ?? '';
-        _addressController.text = settings.businessAddress ?? '';
-        _phoneController.text = settings.businessPhone ?? '';
-        _emailController.text = settings.businessEmail ?? '';
-        _gstinController.text = settings.gstin ?? '';
-        _upiIdController.text = settings.upiId ?? '';
+        _businessNameController.text = businessName ?? '';
+        _addressController.text = address ?? '';
+        _phoneController.text = phone ?? '';
+        _emailController.text = email ?? '';
+        _gstinController.text = gstin ?? '';
+        _upiIdController.text = upiId ?? '';
       });
     }
   }
@@ -147,19 +149,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (_formKey.currentState!.validate()) {
       final database = ref.read(databaseProvider);
 
-      await database
-          .into(database.appSettings)
-          .insertOnConflictUpdate(
-            AppSettingsCompanion.insert(
-              id: const drift.Value(1),
-              businessName: drift.Value(_businessNameController.text),
-              businessAddress: drift.Value(_addressController.text),
-              businessPhone: drift.Value(_phoneController.text),
-              businessEmail: drift.Value(_emailController.text),
-              gstin: drift.Value(_gstinController.text),
-              upiId: drift.Value(_upiIdController.text),
-            ),
-          );
+      // Save each setting as a key-value pair
+      await database.setSetting('businessName', _businessNameController.text);
+      await database.setSetting('businessAddress', _addressController.text);
+      await database.setSetting('businessPhone', _phoneController.text);
+      await database.setSetting('businessEmail', _emailController.text);
+      await database.setSetting('gstin', _gstinController.text);
+      await database.setSetting('upiId', _upiIdController.text);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
