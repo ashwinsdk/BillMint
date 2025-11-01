@@ -13,17 +13,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('BillMint'),
-      ),
+      appBar: AppBar(title: const Text('BillMint')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'BillMint',
-              style: Theme.of(context).textTheme.displayLarge,
-            ),
+            Text('BillMint', style: Theme.of(context).textTheme.displayLarge),
             const SizedBox(height: 16),
             Text(
               'Invoice & Billing Generator',
@@ -50,10 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.receipt_long),
             label: 'Invoices',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Customers',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
             label: 'Products',

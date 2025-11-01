@@ -23,7 +23,9 @@ class ApiService {
     throw Exception('Failed to load customers: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> createCustomer(Map<String, dynamic> customer) async {
+  Future<Map<String, dynamic>> createCustomer(
+    Map<String, dynamic> customer,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/customers'),
       headers: {'Content-Type': 'application/json'},
@@ -36,7 +38,10 @@ class ApiService {
     throw Exception('Failed to create customer: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> updateCustomer(String id, Map<String, dynamic> customer) async {
+  Future<Map<String, dynamic>> updateCustomer(
+    String id,
+    Map<String, dynamic> customer,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/customers/$id'),
       headers: {'Content-Type': 'application/json'},
@@ -66,7 +71,9 @@ class ApiService {
     throw Exception('Failed to load products: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> product) async {
+  Future<Map<String, dynamic>> createProduct(
+    Map<String, dynamic> product,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/products'),
       headers: {'Content-Type': 'application/json'},
@@ -79,7 +86,10 @@ class ApiService {
     throw Exception('Failed to create product: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> product) async {
+  Future<Map<String, dynamic>> updateProduct(
+    String id,
+    Map<String, dynamic> product,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/products/$id'),
       headers: {'Content-Type': 'application/json'},
@@ -100,12 +110,16 @@ class ApiService {
   }
 
   // Invoice endpoints
-  Future<List<dynamic>> getInvoices({int limit = 100, int offset = 0, String? search}) async {
+  Future<List<dynamic>> getInvoices({
+    int limit = 100,
+    int offset = 0,
+    String? search,
+  }) async {
     var url = '$baseUrl/api/invoices?limit=$limit&offset=$offset';
     if (search != null && search.isNotEmpty) {
       url += '&search=$search';
     }
-    
+
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -114,7 +128,9 @@ class ApiService {
     throw Exception('Failed to load invoices: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> invoice) async {
+  Future<Map<String, dynamic>> createInvoice(
+    Map<String, dynamic> invoice,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/invoices'),
       headers: {'Content-Type': 'application/json'},
@@ -127,7 +143,10 @@ class ApiService {
     throw Exception('Failed to create invoice: ${response.statusCode}');
   }
 
-  Future<Map<String, dynamic>> updateInvoice(String id, Map<String, dynamic> invoice) async {
+  Future<Map<String, dynamic>> updateInvoice(
+    String id,
+    Map<String, dynamic> invoice,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/invoices/$id'),
       headers: {'Content-Type': 'application/json'},

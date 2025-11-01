@@ -6,7 +6,7 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -21,11 +21,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(
-    const ProviderScope(
-      child: BillMintApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: BillMintApp()));
 }
 
 class BillMintApp extends StatelessWidget {

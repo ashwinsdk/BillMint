@@ -102,13 +102,9 @@ class AppSettings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [
-  Customers,
-  Products,
-  Invoices,
-  InvoiceItems,
-  AppSettings,
-])
+@DriftDatabase(
+  tables: [Customers, Products, Invoices, InvoiceItems, AppSettings],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -117,14 +113,14 @@ class AppDatabase extends _$AppDatabase {
 
   // Customer queries
   Future<List<Customer>> getAllCustomers() => select(customers).get();
-  
+
   Future<Customer?> getCustomerById(String id) =>
       (select(customers)..where((t) => t.id.equals(id))).getSingleOrNull();
-  
+
   Future<List<Customer>> searchCustomers(String query) =>
       (select(customers)
-        ..where((t) => t.name.like('%$query%') | t.phone.like('%$query%'))
-        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+            ..where((t) => t.name.like('%$query%') | t.phone.like('%$query%'))
+            ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .get();
 
   Future<int> insertCustomer(CustomersCompanion customer) =>
@@ -138,14 +134,14 @@ class AppDatabase extends _$AppDatabase {
 
   // Product queries
   Future<List<Product>> getAllProducts() => select(products).get();
-  
+
   Future<Product?> getProductById(String id) =>
       (select(products)..where((t) => t.id.equals(id))).getSingleOrNull();
-  
+
   Future<List<Product>> searchProducts(String query) =>
       (select(products)
-        ..where((t) => t.name.like('%$query%'))
-        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+            ..where((t) => t.name.like('%$query%'))
+            ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .get();
 
   Future<int> insertProduct(ProductsCompanion product) =>
@@ -161,19 +157,23 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Invoice>> getAllInvoices({int? limit, int? offset}) {
     final query = select(invoices)
       ..orderBy([(t) => OrderingTerm.desc(t.invoiceDate)]);
-    
+
     if (limit != null) query.limit(limit, offset: offset);
-    
+
     return query.get();
   }
-  
+
   Future<Invoice?> getInvoiceById(String id) =>
       (select(invoices)..where((t) => t.id.equals(id))).getSingleOrNull();
-  
+
   Future<List<Invoice>> searchInvoices(String query) =>
       (select(invoices)
-        ..where((t) => t.invoiceNumber.like('%$query%') | t.customerName.like('%$query%'))
-        ..orderBy([(t) => OrderingTerm.desc(t.invoiceDate)]))
+            ..where(
+              (t) =>
+                  t.invoiceNumber.like('%$query%') |
+                  t.customerName.like('%$query%'),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.invoiceDate)]))
           .get();
 
   Future<int> insertInvoice(InvoicesCompanion invoice) =>
@@ -197,8 +197,9 @@ class AppDatabase extends _$AppDatabase {
 
   // Settings queries
   Future<String?> getSetting(String key) async {
-    final setting = await (select(appSettings)..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final setting = await (select(
+      appSettings,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
     return setting?.value;
   }
 
@@ -213,9 +214,15 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Batch operations for backup/restore
-  Future<void> insertCustomersBatch(List<CustomersCompanion> customersList) async {
+  Future<void> insertCustomersBatch(
+    List<CustomersCompanion> customersList,
+  ) async {
     await batch((batch) {
-      batch.insertAll(customers, customersList, mode: InsertMode.insertOrReplace);
+      batch.insertAll(
+        customers,
+        customersList,
+        mode: InsertMode.insertOrReplace,
+      );
     });
   }
 

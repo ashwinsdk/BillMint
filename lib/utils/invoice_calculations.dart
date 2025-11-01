@@ -55,7 +55,8 @@ class InvoiceCalculations {
     final Map<double, double> taxableByRate = {};
     for (final item in items) {
       final itemTaxable = item.amount * (1 - (discount / subtotal));
-      taxableByRate[item.gstRate] = (taxableByRate[item.gstRate] ?? 0) + itemTaxable;
+      taxableByRate[item.gstRate] =
+          (taxableByRate[item.gstRate] ?? 0) + itemTaxable;
     }
 
     double totalCgst = 0;
@@ -143,7 +144,11 @@ class InvoiceCalculations {
       return generateInvoiceNumber(prefix: prefix, year: year, sequence: 1);
     }
 
-    return generateInvoiceNumber(prefix: prefix, year: year, sequence: sequence + 1);
+    return generateInvoiceNumber(
+      prefix: prefix,
+      year: year,
+      sequence: sequence + 1,
+    );
   }
 }
 

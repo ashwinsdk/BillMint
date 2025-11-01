@@ -64,24 +64,27 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  assets:
-    - assets/logo.png
+  # Uncomment when assets are added
+  # assets:
+  #   - assets/logo.png
 
-  fonts:
-    - family: SourceCodePro
-      fonts:
-        - asset: assets/fonts/SourceCodePro-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/SourceCodePro-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/SourceCodePro-Bold.ttf
-          weight: 700
+  # Uncomment when fonts are added
+  # fonts:
+  #   - family: SourceCodePro
+  #     fonts:
+  #       - asset: assets/fonts/SourceCodePro-Regular.ttf
+  #         weight: 400
+  #       - asset: assets/fonts/SourceCodePro-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/SourceCodePro-Bold.ttf
+  #         weight: 700
 
 # Flutter launcher icons configuration
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/logo.png"
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/logo.png"
+# Uncomment when logo is added
+# flutter_launcher_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/logo.png"
+#   adaptive_icon_background: "#000000"
+#   adaptive_icon_foreground: "assets/logo.png"
 

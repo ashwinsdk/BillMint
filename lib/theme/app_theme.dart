@@ -31,7 +31,7 @@ class AppTheme {
       primaryColor: primaryBlue,
       scaffoldBackgroundColor: backgroundColor,
       fontFamily: fontFamily,
-      
+
       // Color scheme
       colorScheme: const ColorScheme.dark(
         primary: primaryBlue,
@@ -62,9 +62,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: cardColor,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
       // Button themes
@@ -74,9 +72,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -101,9 +97,7 @@ class AppTheme {
           foregroundColor: primaryBlue,
           side: const BorderSide(color: primaryBlue),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -166,9 +160,7 @@ class AppTheme {
       ),
 
       // Icon theme
-      iconTheme: const IconThemeData(
-        color: primaryBlue,
-      ),
+      iconTheme: const IconThemeData(color: primaryBlue),
 
       // Text theme
       textTheme: const TextTheme(
