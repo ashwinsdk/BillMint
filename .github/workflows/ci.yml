@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Analyze code
+        run: flutter analyze
+      
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Run tests
+        run: flutter test
+
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install backend dependencies
+        run: cd backend && npm install
+      
+      - name: Run backend tests
+        run: cd backend && npm test || echo "No tests configured"

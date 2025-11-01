@@ -1,0 +1,11 @@
+PLACEHOLDER FILE
+
+This is a placeholder for SourceCodePro-Regular.ttf
+
+Download Source Code Pro fonts from:
+https://fonts.google.com/specimen/Source+Code+Pro
+
+Extract and place the following files here:
+- SourceCodePro-Regular.ttf
+- SourceCodePro-SemiBold.ttf
+- SourceCodePro-Bold.ttf

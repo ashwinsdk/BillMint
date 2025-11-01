@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Pre-commit hook for BillMint
+# Formats code and runs quick checks before commit
+
+echo "Running pre-commit checks..."
+
+# Format Dart code
+echo "Formatting code..."
+dart format .
+
+# Run analyzer
+echo "Running analyzer..."
+flutter analyze
+
+if [ $? -ne 0 ]; then
+    echo "Analyzer found issues. Please fix before committing."
+    exit 1
+fi
+
+# Run quick tests
+echo "Running tests..."
+flutter test
+
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Please fix before committing."
+    exit 1
+fi
+
+echo "Pre-commit checks passed!"
+exit 0
