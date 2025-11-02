@@ -24,6 +24,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   final List<InvoiceItemData> _items = [];
   DateTime _invoiceDate = DateTime.now();
   DateTime? _dueDate;
+  String _paymentTerms = 'Net 30 Days'; // Default payment terms
   final _notesController = TextEditingController();
   double _discount = 0.0;
 
@@ -40,7 +41,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     return sum + (item.amount - itemTaxable);
   });
   double get _total =>
-      _taxableValue + (_taxableValue * 0); // GST already in price
+      _subtotal - _discount; // Items already include GST in price
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +82,6 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           _buildTotalSection(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addItem,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Item'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -156,9 +151,17 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     return Card(
       child: Column(
         children: [
-          const ListTile(
-            leading: Icon(Icons.shopping_cart),
-            title: Text('Items', style: TextStyle(fontWeight: FontWeight.bold)),
+          ListTile(
+            leading: const Icon(Icons.shopping_cart),
+            title: const Text(
+              'Items',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.add_circle, color: Colors.green),
+              onPressed: _addItem,
+              tooltip: 'Add Item',
+            ),
           ),
           if (_items.isEmpty)
             const Padding(
@@ -444,7 +447,10 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           taxableValue: _taxableValue,
           cgst: drift.Value(_totalGST / 2),
           sgst: drift.Value(_totalGST / 2),
-          total: _subtotal,
+          total: _total, // Use calculated total
+          paymentStatus: drift.Value('unpaid'), // New: Default status
+          paidAmount: drift.Value(0), // New: No payment yet
+          paymentTerms: drift.Value(_paymentTerms), // New: Payment terms
           notes: drift.Value(
             _notesController.text.isEmpty ? null : _notesController.text,
           ),

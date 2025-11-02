@@ -64,6 +64,11 @@ class Invoices extends Table {
   RealColumn get igst => real().withDefault(const Constant(0))();
   RealColumn get total => real()();
   TextColumn get notes => text().nullable()();
+  TextColumn get paymentStatus =>
+      text().withDefault(const Constant('unpaid'))(); // unpaid, partial, paid
+  DateTimeColumn get paymentDate => dateTime().nullable()();
+  RealColumn get paidAmount => real().withDefault(const Constant(0))();
+  TextColumn get paymentTerms => text().nullable()(); // e.g., "Net 30 Days"
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -106,7 +111,25 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(connection.connect());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // Add payment tracking columns to existing invoices
+          await m.addColumn(invoices, invoices.paymentStatus);
+          await m.addColumn(invoices, invoices.paymentDate);
+          await m.addColumn(invoices, invoices.paidAmount);
+          await m.addColumn(invoices, invoices.paymentTerms);
+        }
+      },
+    );
+  }
 
   // Customer queries
   Future<List<Customer>> getAllCustomers() => select(customers).get();

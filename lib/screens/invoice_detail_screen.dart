@@ -13,6 +13,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:drift/drift.dart' as drift;
 import '../data/database.dart';
 import '../providers/database_provider.dart';
 
@@ -30,6 +31,10 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   List<InvoiceItem> _items = [];
   Map<String, String> _businessSettings = {};
   bool _isLoading = true;
+
+  // Recalculate correct total (subtotal - discount)
+  // Items already include GST in their prices
+  double get _correctTotal => widget.invoice.subtotal - widget.invoice.discount;
 
   @override
   void initState() {
@@ -166,10 +171,47 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       Text(
                         'Due Date: ${dateFormat.format(widget.invoice.dueDate!)}',
                       ),
+                    if (widget.invoice.paymentTerms != null)
+                      Text(
+                        'Terms: ${widget.invoice.paymentTerms}',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
                   ],
                 ),
+                _buildPaymentStatusBadge(),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // Payment Action Buttons
+            if (widget.invoice.paymentStatus != 'paid')
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _markAsPaid,
+                      icon: const Icon(Icons.payment),
+                      label: const Text('Mark as Paid'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
+                      ),
+                    ),
+                  ),
+                  if (widget.invoice.paymentStatus == 'unpaid')
+                    const SizedBox(width: 8),
+                  if (widget.invoice.paymentStatus == 'unpaid')
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _recordPartialPayment,
+                        icon: const Icon(Icons.payments),
+                        label: const Text('Partial Payment'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: 24),
 
             // Customer Details
@@ -333,7 +375,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       const Divider(thickness: 2),
                       _buildTotalRow(
                         'Total:',
-                        widget.invoice.total,
+                        _correctTotal,
                         isBold: true,
                         fontSize: 18,
                       ),
@@ -400,6 +442,171 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentStatusBadge() {
+    Color bgColor;
+    Color textColor;
+    String label;
+
+    switch (widget.invoice.paymentStatus) {
+      case 'paid':
+        bgColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        label = 'PAID';
+        break;
+      case 'partial':
+        bgColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        final paid = widget.invoice.paidAmount;
+        final total = _correctTotal;
+        label =
+            'PARTIAL\n₹${paid.toStringAsFixed(0)}/₹${total.toStringAsFixed(0)}';
+        break;
+      default: // 'unpaid'
+        bgColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        label = 'UNPAID';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Future<void> _markAsPaid() async {
+    final database = ref.read(databaseProvider);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark as Paid'),
+        content: Text(
+          'Mark invoice ${widget.invoice.invoiceNumber} as fully paid?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Mark as Paid'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Create a companion object with the updated values
+      final updatedInvoice = InvoicesCompanion(
+        id: drift.Value(widget.invoice.id),
+        paymentStatus: const drift.Value('paid'),
+        paidAmount: drift.Value(_correctTotal),
+        paymentDate: drift.Value(DateTime.now()),
+      );
+
+      // Update using the database update method
+      await (database.update(
+        database.invoices,
+      )..where((t) => t.id.equals(widget.invoice.id))).write(updatedInvoice);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Invoice marked as paid')));
+        Navigator.pop(context); // Return to previous screen
+      }
+    }
+  }
+
+  Future<void> _recordPartialPayment() async {
+    final database = ref.read(databaseProvider);
+    final amountController = TextEditingController();
+
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Record Partial Payment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Total: ₹${_correctTotal.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Payment Amount',
+                prefixText: '₹ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = double.tryParse(amountController.text);
+              if (value != null && value > 0 && value < _correctTotal) {
+                Navigator.pop(context, value);
+              }
+            },
+            child: const Text('Record'),
+          ),
+        ],
+      ),
+    );
+
+    if (amount != null) {
+      final newPaidAmount = widget.invoice.paidAmount + amount;
+      final newStatus = newPaidAmount >= _correctTotal ? 'paid' : 'partial';
+
+      // Create a companion object with the updated values
+      final updatedInvoice = InvoicesCompanion(
+        id: drift.Value(widget.invoice.id),
+        paymentStatus: drift.Value(newStatus),
+        paidAmount: drift.Value(newPaidAmount),
+        paymentDate: drift.Value(DateTime.now()),
+      );
+
+      // Update using the database update method
+      await (database.update(
+        database.invoices,
+      )..where((t) => t.id.equals(widget.invoice.id))).write(updatedInvoice);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Recorded payment of ₹${amount.toStringAsFixed(2)}'),
+          ),
+        );
+        Navigator.pop(context); // Return to previous screen
+      }
+    }
   }
 
   Future<void> _shareInvoice() async {
@@ -470,7 +677,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.all(20),
         build: (pw.Context context) {
           return [
             // Header with logo
@@ -483,40 +690,52 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     pw.Text(
                       _businessSettings['businessName'] ?? 'Your Business',
                       style: pw.TextStyle(
-                        fontSize: 24,
+                        fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
-                    pw.SizedBox(height: 8),
+                    pw.SizedBox(height: 4),
                     if (_businessSettings['businessAddress']!.isNotEmpty)
-                      pw.Text(_businessSettings['businessAddress']!),
+                      pw.Text(
+                        _businessSettings['businessAddress']!,
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
                     if (_businessSettings['businessPhone']!.isNotEmpty)
-                      pw.Text('Phone: ${_businessSettings['businessPhone']}'),
+                      pw.Text(
+                        'Phone: ${_businessSettings['businessPhone']}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
                     if (_businessSettings['businessEmail']!.isNotEmpty)
-                      pw.Text('Email: ${_businessSettings['businessEmail']}'),
+                      pw.Text(
+                        'Email: ${_businessSettings['businessEmail']}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
                     if (_businessSettings['gstin']!.isNotEmpty)
-                      pw.Text('GSTIN: ${_businessSettings['gstin']}'),
+                      pw.Text(
+                        'GSTIN: ${_businessSettings['gstin']}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
                   ],
                 ),
                 if (logo != null)
-                  pw.Container(width: 80, height: 80, child: pw.Image(logo)),
+                  pw.Container(width: 60, height: 60, child: pw.Image(logo)),
               ],
             ),
-            pw.Divider(thickness: 2),
-            pw.SizedBox(height: 16),
+            pw.Divider(thickness: 1.5),
+            pw.SizedBox(height: 8),
 
             // Invoice Title
             pw.Center(
               child: pw.Text(
                 'TAX INVOICE',
                 style: pw.TextStyle(
-                  fontSize: 20,
+                  fontSize: 16,
                   fontWeight: pw.FontWeight.bold,
-                  letterSpacing: 2,
+                  letterSpacing: 1.5,
                 ),
               ),
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
 
             // Invoice Details
             pw.Row(
@@ -528,24 +747,78 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   children: [
                     pw.Text(
                       'Invoice No: ${widget.invoice.invoiceNumber}',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
                     pw.Text(
                       'Date: ${dateFormat.format(widget.invoice.invoiceDate)}',
+                      style: const pw.TextStyle(fontSize: 9),
                     ),
                     if (widget.invoice.dueDate != null)
                       pw.Text(
                         'Due Date: ${dateFormat.format(widget.invoice.dueDate!)}',
+                        style: const pw.TextStyle(fontSize: 9),
                       ),
+                    if (widget.invoice.paymentTerms != null)
+                      pw.Text(
+                        'Terms: ${widget.invoice.paymentTerms}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey200,
+                        borderRadius: pw.BorderRadius.circular(4),
+                        border: pw.Border.all(
+                          color: PdfColors.black,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: pw.Text(
+                        widget.invoice.paymentStatus == 'paid'
+                            ? 'PAID'
+                            : widget.invoice.paymentStatus == 'partial'
+                            ? 'PARTIAL PAYMENT'
+                            : 'UNPAID',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    if (widget.invoice.paymentStatus == 'partial') ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Paid: Rs. ${widget.invoice.paidAmount.toStringAsFixed(2)}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
+                    ],
+                    if (widget.invoice.paymentDate != null) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Payment Date: ${dateFormat.format(widget.invoice.paymentDate!)}',
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
 
             // Customer Details
             pw.Container(
-              padding: const pw.EdgeInsets.all(12),
+              padding: const pw.EdgeInsets.all(8),
               decoration: pw.BoxDecoration(
                 border: pw.Border.all(),
                 borderRadius: pw.BorderRadius.circular(4),
@@ -557,73 +830,110 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     'Bill To:',
                     style: pw.TextStyle(
                       fontWeight: pw.FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 10,
                     ),
                   ),
-                  pw.SizedBox(height: 4),
+                  pw.SizedBox(height: 2),
                   pw.Text(
                     widget.invoice.customerName,
-                    style: const pw.TextStyle(fontSize: 14),
+                    style: const pw.TextStyle(fontSize: 10),
                   ),
                   if (widget.invoice.customerPhone != null)
-                    pw.Text(widget.invoice.customerPhone!),
+                    pw.Text(
+                      widget.invoice.customerPhone!,
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
                   if (widget.invoice.customerAddress != null)
-                    pw.Text(widget.invoice.customerAddress!),
+                    pw.Text(
+                      widget.invoice.customerAddress!,
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
                   if (widget.invoice.customerGstin != null)
-                    pw.Text('GSTIN: ${widget.invoice.customerGstin}'),
+                    pw.Text(
+                      'GSTIN: ${widget.invoice.customerGstin}',
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
                 ],
               ),
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
 
             // Items Table
             pw.Table(
-              border: pw.TableBorder.all(),
+              border: pw.TableBorder.all(color: PdfColors.black, width: 1),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(25),
+                1: const pw.FlexColumnWidth(3),
+                2: const pw.FixedColumnWidth(55),
+                3: const pw.FixedColumnWidth(50),
+                4: const pw.FixedColumnWidth(65),
+                5: const pw.FixedColumnWidth(75),
+              },
               children: [
                 // Header
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.grey300),
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         '#',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         'Item',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         'HSN',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         'Qty',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         'Rate',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
+                        textAlign: pw.TextAlign.right,
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(5),
                       child: pw.Text(
                         'Amount',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
+                        textAlign: pw.TextAlign.right,
                       ),
                     ),
                   ],
@@ -633,53 +943,92 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   final index = entry.key;
                   final item = entry.value;
                   return pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: index % 2 == 0
+                          ? PdfColors.grey100
+                          : PdfColors.white,
+                    ),
                     children: [
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text('${index + 1}'),
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          '${index + 1}',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(5),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text(item.name),
+                            pw.Text(
+                              item.name,
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 9,
+                              ),
+                            ),
+                            pw.SizedBox(height: 1),
                             pw.Text(
                               'GST ${item.gstRate}%',
-                              style: const pw.TextStyle(fontSize: 10),
+                              style: const pw.TextStyle(
+                                fontSize: 8,
+                                color: PdfColors.grey700,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text(item.hsnCode ?? '-'),
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          item.hsnCode ?? '-',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text('${item.quantity} ${item.unit}'),
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          '${item.quantity} ${item.unit}',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text('₹${item.price.toStringAsFixed(2)}'),
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          'Rs. ${item.price.toStringAsFixed(2)}',
+                          textAlign: pw.TextAlign.right,
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Text('₹${item.amount.toStringAsFixed(2)}'),
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text(
+                          'Rs. ${item.amount.toStringAsFixed(2)}',
+                          textAlign: pw.TextAlign.right,
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 9,
+                          ),
+                        ),
                       ),
                     ],
                   );
                 }),
               ],
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
 
             // Totals
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
                 pw.Container(
-                  width: 250,
+                  width: 260,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey800, width: 1),
+                    borderRadius: pw.BorderRadius.circular(4),
+                  ),
                   child: pw.Column(
                     children: [
                       _buildPdfTotalRow('Subtotal:', widget.invoice.subtotal),
@@ -688,6 +1037,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                           'Discount:',
                           -widget.invoice.discount,
                         ),
+                      pw.Divider(thickness: 0.5, color: PdfColors.grey400),
                       _buildPdfTotalRow(
                         'Taxable Value:',
                         widget.invoice.taxableValue,
@@ -696,11 +1046,31 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       _buildPdfTotalRow('SGST:', widget.invoice.sgst),
                       if (widget.invoice.igst > 0)
                         _buildPdfTotalRow('IGST:', widget.invoice.igst),
-                      pw.Divider(thickness: 2),
-                      _buildPdfTotalRow(
-                        'Total:',
-                        widget.invoice.total,
-                        isBold: true,
+                      pw.Container(
+                        color: PdfColors.grey300,
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              'Total:',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                            pw.Text(
+                              'Rs. ${_correctTotal.toStringAsFixed(2)}',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -711,34 +1081,129 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
             // Notes
             if (widget.invoice.notes != null &&
                 widget.invoice.notes!.isNotEmpty) ...[
-              pw.SizedBox(height: 16),
-              pw.Text(
-                'Notes:',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              pw.SizedBox(height: 8),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400),
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Notes:',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 9,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      widget.invoice.notes!,
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
               ),
-              pw.SizedBox(height: 4),
-              pw.Text(widget.invoice.notes!),
             ],
 
-            // Footer
-            pw.SizedBox(height: 24),
-            if (_businessSettings['upiId']!.isNotEmpty) ...[
-              pw.Text(
-                'Payment Info:',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            // Terms & Conditions
+            pw.SizedBox(height: 8),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey400),
+                borderRadius: pw.BorderRadius.circular(4),
               ),
-              pw.SizedBox(height: 4),
-              pw.Text('UPI ID: ${_businessSettings['upiId']}'),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Terms & Conditions:',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    '1. Payment is due within the specified payment terms.',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                  pw.Text(
+                    '2. Please make the payment to the provided bank account or UPI ID.',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                  pw.Text(
+                    '3. Goods once sold will not be taken back or exchanged.',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                  pw.Text(
+                    '4. All disputes subject to local jurisdiction only.',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+            ),
+
+            // Footer
+            pw.SizedBox(height: 8),
+            if (_businessSettings['upiId']!.isNotEmpty) ...[
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400),
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Payment Info',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 9,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'UPI ID: ${_businessSettings['upiId']}',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
             ],
-            pw.SizedBox(height: 16),
             pw.Center(
               child: pw.Text(
                 'Thank you for your business!',
-                style: const pw.TextStyle(fontSize: 12),
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 4),
+            pw.Center(
+              child: pw.Text(
+                'Powered by BillMint - Professional Invoice & Billing Management',
+                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
               ),
             ),
           ];
         },
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 8),
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+          ),
+        ),
       ),
     );
 
@@ -749,9 +1214,10 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     String label,
     double amount, {
     bool isBold = false,
+    PdfColor? textColor,
   }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -759,12 +1225,16 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
             label,
             style: pw.TextStyle(
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: textColor,
+              fontSize: 9,
             ),
           ),
           pw.Text(
-            '₹${amount.toStringAsFixed(2)}',
+            'Rs. ${amount.toStringAsFixed(2)}',
             style: pw.TextStyle(
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: textColor,
+              fontSize: 9,
             ),
           ),
         ],

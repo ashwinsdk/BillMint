@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +25,21 @@ void main() async {
   runApp(const ProviderScope(child: BillMintApp()));
 }
 
-class BillMintApp extends StatelessWidget {
+class BillMintApp extends StatefulWidget {
   const BillMintApp({super.key});
+
+  @override
+  State<BillMintApp> createState() => _BillMintAppState();
+}
+
+class _BillMintAppState extends State<BillMintApp> {
+  bool _showSplash = true;
+
+  void _onInitializationComplete() {
+    setState(() {
+      _showSplash = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +47,9 @@ class BillMintApp extends StatelessWidget {
       title: 'BillMint',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+      home: _showSplash
+          ? SplashScreen(onInitializationComplete: _onInitializationComplete)
+          : const HomeScreen(),
     );
   }
 }
