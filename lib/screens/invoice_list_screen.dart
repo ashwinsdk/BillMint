@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../data/database.dart';
 import 'create_invoice_screen.dart';
+import 'invoice_detail_screen.dart';
 
 class InvoiceListScreen extends ConsumerStatefulWidget {
   const InvoiceListScreen({super.key});
@@ -138,8 +139,12 @@ class InvoiceListItem extends StatelessWidget {
           ],
         ),
         onTap: () {
-          // Navigate to invoice detail screen
-          // Navigator.push(context, MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoice)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => InvoiceDetailScreen(invoice: invoice),
+            ),
+          );
         },
       ),
     );

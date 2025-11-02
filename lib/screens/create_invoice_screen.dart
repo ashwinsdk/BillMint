@@ -58,7 +58,12 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 80, // Space for FAB
+              ),
               children: [
                 _buildCustomerSection(),
                 const SizedBox(height: 16),
@@ -69,6 +74,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 _buildDiscountSection(),
                 const SizedBox(height: 16),
                 _buildNotesSection(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -80,6 +86,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Add Item'),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
