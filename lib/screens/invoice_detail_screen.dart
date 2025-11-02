@@ -13,7 +13,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:printing/printing.dart';
 import '../data/database.dart';
 import '../providers/database_provider.dart';
 
@@ -75,11 +74,6 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       appBar: AppBar(
         title: Text(widget.invoice.invoiceNumber),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: _printInvoice,
-            tooltip: 'Print',
-          ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareInvoice,
@@ -405,12 +399,6 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> _printInvoice() async {
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => await _generatePdf(),
     );
   }
 

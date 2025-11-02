@@ -22,7 +22,6 @@ dependencies:
   
   # PDF Generation
   pdf: ^3.11.3
-  printing: ^5.14.2
   
   # QR Codes for UPI
   qr_flutter: ^4.1.0
