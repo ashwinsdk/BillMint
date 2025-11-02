@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'invoice_list_screen.dart';
+import 'customer_list_screen.dart';
+import 'product_list_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,29 +14,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
+  // List of screens for bottom navigation
+  static const List<Widget> _screens = [
+    InvoiceListScreen(),
+    CustomerListScreen(),
+    ProductListScreen(),
+    SettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('BillMint')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('BillMint', style: Theme.of(context).textTheme.displayLarge),
-            const SizedBox(height: 16),
-            Text(
-              'Invoice & Billing Generator',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 48),
-            ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add),
-              label: const Text('Create Invoice'),
-            ),
-          ],
-        ),
-      ),
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -40,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _selectedIndex = index;
           });
         },
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),

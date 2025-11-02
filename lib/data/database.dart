@@ -164,6 +164,10 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  Stream<List<Invoice>> watchAllInvoices() => (select(
+    invoices,
+  )..orderBy([(t) => OrderingTerm.desc(t.invoiceDate)])).watch();
+
   Future<Invoice?> getInvoiceById(String id) =>
       (select(invoices)..where((t) => t.id.equals(id))).getSingleOrNull();
 

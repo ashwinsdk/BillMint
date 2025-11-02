@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../data/database.dart';
+import 'create_invoice_screen.dart';
 
 class InvoiceListScreen extends ConsumerStatefulWidget {
   const InvoiceListScreen({super.key});
@@ -85,8 +86,10 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navigate to create invoice screen
-          // Navigator.push(context, MaterialPageRoute(builder: (_) => CreateInvoiceScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateInvoiceScreen()),
+          );
         },
         child: const Icon(Icons.add),
       ),
