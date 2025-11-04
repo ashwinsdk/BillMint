@@ -63,9 +63,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  assets:
-    - assets/BillMint_logo.svg
-    - assets/BillMint_logo_transparent.svg
+  # Uncomment when assets are added
+  # assets:
+  #   - assets/logo.png
 
   # Uncomment when fonts are added
   # fonts:
