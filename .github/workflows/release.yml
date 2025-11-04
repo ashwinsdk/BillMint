@@ -1,0 +1,141 @@
+name: Build and Release APK and IPA
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+      
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+          cd ..
+      
+      - name: Build iOS (no code signing)
+        run: flutter build ios --release --no-codesign
+      
+      - name: Create IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r billmint-unsigned.ipa Payload
+          rm -rf Payload
+      
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: billmint-unsigned.ipa
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: apk
+      
+      - name: Download iOS IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+          path: ipa
+      
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## BillMint ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            **Android APK**
+            - ARM64: app-arm64-v8a-release.apk (recommended for most devices)
+            - ARMv7: app-armeabi-v7a-release.apk (older 32-bit devices)
+            - x86_64: app-x86_64-release.apk (emulators)
+            
+            **iOS IPA**
+            - billmint-unsigned.ipa (requires manual signing)
+            
+            ### Installation
+            
+            **Android:** Download APK, enable Unknown Sources, install
+            **iOS:** Requires development provisioning or signing
+          draft: false
+          prerelease: false
+          files: |
+            apk/app-arm64-v8a-release.apk
+            apk/app-armeabi-v7a-release.apk
+            apk/app-x86_64-release.apk
+            ipa/billmint-unsigned.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
