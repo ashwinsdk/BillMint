@@ -246,9 +246,9 @@ npm start
 
 ## License
 
-Copyright 2025 BillMint. All rights reserved.
-
+Copyright 2025 BillMint. All rights reserved.[](LINSENCE)
+ 
 ## Support
 
 GitHub: https://github.com/ashwinsdk/BillMint
-Email: ashwinsdk@github.com
+Email: ashwin2005s@gmail.com
